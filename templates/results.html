@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>URL Generator Results</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .results-container {
+        display: flex;
+        justify-content: space-between;
+      }
+      .column {
+        width: 48%;
+      }
+      .url-item {
+        margin-bottom: 10px;
+        word-break: break-all;
+      }
+      .time-taken {
+        margin-top: 20px;
+        font-style: italic;
+      }
+      .back-button {
+        margin-top: 20px;
+        padding: 10px 20px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+      }
+      .back-button:hover {
+        background-color: #45a049;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Results</h1>
+    <div class="results-container">
+      <div class="column">
+        <h2>Working URLs</h2>
+        {% for result in results %} {% if result.works %}
+        <div class="url-item">
+          <a href="{{ result.url }}" target="_blank">{{ result.url }}</a>
+        </div>
+        {% endif %} {% endfor %}
+      </div>
+      <div class="column">
+        <h2>Non-working URLs</h2>
+        {% for result in results %} {% if not result.works %}
+        <div class="url-item">
+          <a href="{{ result.url }}" target="_blank">{{ result.url }}</a>
+        </div>
+        {% endif %} {% endfor %}
+      </div>
+    </div>
+    <div class="time-taken">
+      Time taken: {{ "%.2f"|format(time_taken) }} seconds
+    </div>
+    <a href="/" class="back-button">Back to Generator</a>
+  </body>
+</html>

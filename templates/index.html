@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>URL Generator</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+      }
+      input[type="number"] {
+        padding: 5px;
+        width: 200px;
+      }
+      button {
+        padding: 10px 20px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+      #results {
+        display: none;
+        margin-top: 20px;
+      }
+      .results-container {
+        display: flex;
+        justify-content: space-between;
+      }
+      .column {
+        width: 48%;
+      }
+      .url-item {
+        margin-bottom: 10px;
+        word-break: break-all;
+      }
+      .time-taken {
+        margin-top: 20px;
+        font-style: italic;
+      }
+      #loading {
+        display: none;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>URL Generator</h1>
+    <form id="generatorForm" onsubmit="handleSubmit(event)">
+      <div class="form-group">
+        <label for="start_range">Start Range:</label>
+        <input type="number" id="start_range" name="start_range" required />
+      </div>
+      <div class="form-group">
+        <label for="end_range">End Range:</label>
+        <input type="number" id="end_range" name="end_range" required />
+      </div>
+      <button type="submit">Generate URLs</button>
+    </form>
+
+    <div id="loading">Processing URLs...</div>
+
+    <div id="results">
+      <div class="results-container">
+        <div class="column">
+          <h2>Working URLs</h2>
+          <div id="workingUrls"></div>
+        </div>
+        <div class="column">
+          <h2>Non-working URLs</h2>
+          <div id="nonWorkingUrls"></div>
+        </div>
+      </div>
+      <div id="timeTaken" class="time-taken"></div>
+    </div>
+
+    <script>
+      async function handleSubmit(event) {
+        event.preventDefault();
+
+        const form = event.target;
+        const startRange = parseInt(form.start_range.value);
+        const endRange = parseInt(form.end_range.value);
+
+        // Reset results
+        document.getElementById("workingUrls").innerHTML = "";
+        document.getElementById("nonWorkingUrls").innerHTML = "";
+        document.getElementById("timeTaken").innerHTML = "";
+
+        // Show loading and results containers
+        document.getElementById("loading").style.display = "block";
+        document.getElementById("results").style.display = "block";
+
+        // Make the initial POST request
+        await fetch("/api/generate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            start_range: startRange,
+            end_range: endRange,
+          }),
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            // Create EventSource for streaming results
+            const eventSource = new EventSource(`/stream-results`);
+
+            eventSource.onmessage = function (event) {
+              const data = JSON.parse(event.data);
+
+              if (data.finished) {
+                // Update final timing and close connection
+                document.getElementById(
+                  "timeTaken"
+                ).innerHTML = `Time taken: ${data.time_taken.toFixed(
+                  2
+                )} seconds`;
+                document.getElementById("loading").style.display = "none";
+                eventSource.close();
+                return;
+              }
+
+              // Add URL to appropriate column
+              const urlDiv = document.createElement("div");
+              urlDiv.className = "url-item";
+              urlDiv.innerHTML = `<a href="${data.url}" target="_blank">${data.url}</a>`;
+
+              if (data.works) {
+                document.getElementById("workingUrls").appendChild(urlDiv);
+              } else {
+                document.getElementById("nonWorkingUrls").appendChild(urlDiv);
+              }
+            };
+
+            eventSource.onerror = function (error) {
+              console.error("EventSource failed:", error);
+              document.getElementById("loading").style.display = "none";
+              eventSource.close();
+            };
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            document.getElementById("loading").style.display = "none";
+            alert("An error occurred while processing your request.");
+          });
+      }
+    </script>
+  </body>
+</html>
