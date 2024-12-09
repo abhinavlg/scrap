@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: test
+    env: python
+    buildCommand: pip install -r requirements.txt && playwright install
+    startCommand: gunicorn app:app
+    postInstallCommand: ./postinstall.sh  # Add this line to run the post-install script
